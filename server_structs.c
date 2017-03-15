@@ -21,7 +21,7 @@ struct session_t* add_session(struct session_t* new_session, struct session_t* h
     new_session->next = head;
     return new_session;    
 }
-struct session_t* delete_session(int session_id, struct session_t* head){
+struct session_t* delete_session(char* session_id, struct session_t* head){
     struct session_t* cur = head;
     struct session_t* pre = NULL;
     
@@ -38,7 +38,7 @@ struct session_t* delete_session(int session_id, struct session_t* head){
     return head;
 }
 
-struct session_t* find_session(int session_id, struct session_t* head){
+struct session_t* find_session(char* session_id, struct session_t* head){
     struct session_t* cur = head;
     
     while(cur != NULL && (cur->session_id != session_id) ) {
@@ -68,7 +68,7 @@ struct user_t* delete_user(char* client_id, struct user_t* head) {
         cur = cur->next;
     }
     
-    if(cur == NULL) { return NULL; } 
+    if(cur == NULL) { return head; } 
     if(pre == NULL) { return cur->next; }
     
     pre->next = cur->next;

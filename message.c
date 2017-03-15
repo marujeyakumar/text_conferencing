@@ -33,36 +33,7 @@ int receive_message(struct lab3message* message, int sockfd){
 	}
 }
 
-/*int handle_message_s(struct lab3message* message){
-	switch(message -> type){
-		case(LOGIN): login_s(message);
-		case(EXIT): ;
-		case(JOIN): ;
-		case(LEAVE_SESS): ;
-		case(NEW_SESS): ;
-		case(MESSAGE): ;
-		case(QUERY): ;
-	}
 
-}
-*/
-/*void login_s(lab3message* message){
-    int valid_user_pw = 1; //add check later
-    struct lab3message packet;
-    
-    if (valid_user_pw) {
-        char* data = "login_ack";
-        packet.type = LO_ACK;
-        
-    } else{
-        char* data = "login_nack";
-        packet.type = LO_NACK;
-    }
-    packet.size = sizeof (packet.data);
-    strcpy(packet.source, 0);
-    strcpy(packet.data, packet.data);
-    deliver_message(&packet, newfd);
-}*/
 
 /*int handle_message_c(struct lab3message* message){
 	switch(message -> type){

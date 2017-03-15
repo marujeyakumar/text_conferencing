@@ -3,7 +3,6 @@
 
 #include "message.h"
 #include <sys/socket.h>
-#define MAXBUFLEN 1500
 
 enum COMMANDS{
 	LOG_IN 		   = 0, 

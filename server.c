@@ -1,5 +1,6 @@
 #include "server.h"
 #include "server_structs.h"
+#include "message.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -150,23 +151,32 @@ void handle_message_s(struct lab3message* message){
                 login_s(message);
                 break;
             case(EXIT): 
-                exit_s();
+                exit_s(message);
                 break;
             case(JOIN): 
                 join_s(message);
                 break;
-            case(LEAVE_SESS): ;
-            case(NEW_SESS): ;
-            case(MESSAGE): ;
-            case(QUERY): ;
-        default: printf("Client send invalid packet type\n");
+            case(LEAVE_SESS): 
+                leave_s(message);
+                break;   
+            case(NEW_SESS): 
+                create_s(message);
+                break;
+            /*case(MESSAGE): 
+                text_s(message);
+                break;
+            case(QUERY): 
+                query_s(message);
+                break;*/
+        default: printf("Client sent invalid packet type\n");
     } 
 }
 
 int check_user(char* id, char* pw){
     if( strcmp(id, "jean")==0 ) {
         if(strcmp(pw, "pw")==0){
-            return 0;
+            if(find_user(id, active_users)==NULL){ return 0; }
+            else { return 3; }
         } else return 1; //bad pw
     } 
     return 2; //no user
@@ -174,42 +184,143 @@ int check_user(char* id, char* pw){
 
 void login_s(struct lab3message* message){
     char *token;
-    char client_id [MAXBUFLEN];
-    char pw[MAXBUFLEN]; 
+    struct user_t new_user;
     
+    new_user.sockfd = newfd;
     token = strtok(message->data, " ");
-    strcpy(client_id, token);
+    strcpy(new_user.client_id, token);
     token = strtok(NULL, "");
-    strcpy(pw, token);
-
-    int valid_user_pw = check_user(client_id, pw); 
+    strcpy(new_user.password, token);
+    new_user.cur_session = "";
+    new_user.next = NULL;
+    
+    
+    int valid_user_pw = check_user(new_user.client_id, new_user.password); 
+    
     struct lab3message packet;
-    char* data;
+    char* data = "";
+    packet.type = LO_NACK;
     
     if (valid_user_pw == 0) {
-        data = "";
-        packet.type = LO_ACK;
         
-        /*struct user_t new_user =  
-        active_users = add_user();*/
+        packet.type = LO_ACK;     
+        active_users = add_user(&new_user, active_users);
+        
     } else if (valid_user_pw == 1){
-        data = "incorrect password";
-        packet.type = LO_NACK;
-    } else if(valid_user_pw == 2) {
-        data = "user does not exist";
-        packet.type = LO_NACK;
+        data = "incorrect password";        
+    } else if(valid_user_pw == 2) {   
+        data = "unauthorized user";
+    } else if(valid_user_pw == 3) {
+        data = "user already logged in";
     }
+    
     packet.size = sizeof (packet.data);
     strcpy(packet.data, data);
 
     deliver_message(&packet, newfd);
 }
 
-void exit_s(){
-    //set user sess to false
-    //close socket?
+void exit_s(struct lab3message* message){
+    close(newfd);
+    active_users = delete_user(message->source, active_users);
 }
 
 void join_s(struct lab3message* message){
+    struct session_t* session_to_join = find_session(message->data, active_sessions);
+    struct user_t* user = find_user(message->source, active_users);
+    if( user==NULL) {
+        printf("error: user is not logged in\n");
+        return;
+    }
+    
+    if( session_to_join == NULL) {
+        printf("error: session doesn't exist\n");
+        return;
+    }
+    
+    if (strcmp(user->cur_session, "") != 0) {
+        printf("error: user has already joined session %s", user->cur_session);
+        return;
+    }
+
+    struct user_t new_user = *user;
+    session_to_join->joined_users = add_user(&new_user, session_to_join->joined_users);
+    //update user session info
+    strcpy(user->cur_session, message->data);
+}
+
+void leave_s(struct lab3message* message){
+    struct session_t* session_to_leave = find_session(message->data, active_sessions);
+    struct user_t* user = find_user(message->source, active_users);
+    
+    if( user==NULL) {
+        printf("error: user is not logged in\n");
+        return;
+    }
+    
+    if( session_to_leave == NULL) {
+        printf("error: session doesn't exist\n");
+        return;
+    }
+    
+    //check if user is in the session that it wants to leave
+    user = find_user(message->source, session_to_leave->joined_users);
+    if(user==NULL){
+        printf("error: user is not even in this session\n");
+        return;
+    }
+    
+    //delete user from session
+    session_to_leave->joined_users = delete_user(message->source, session_to_leave->joined_users);
+    //update user session info
+    strcpy(user->cur_session, "");
+}
+
+void create_s(struct lab3message* message){
+    struct session_t* session_to_leave = find_session(message->data, active_sessions);
+    
+    if( session_to_leave != NULL) {
+        printf("error: session already exists\n");
+        return;
+    }
+    
+    struct session_t new_session;
+    strcpy(new_session.session_id, message->data);
+    new_session.joined_users = NULL;
+    
+    active_sessions = add_session(&new_session, active_sessions);
+    
+}
+
+void text_s(struct lab3message* message){
+    struct user_t* user = find_user(message->source, active_users);
+    struct session_t* cur_session = find_session(user->cur_session, active_sessions);
+    
+    if( user==NULL) {
+        printf("error: user is not logged in\n");
+        return;
+    }
+    
+    if( cur_session == NULL ){
+        printf("error: user has not joined a session\n");
+        return;        
+    }
+    
+    //broadcast
+    struct lab3message packet;
+    packet.type = MESSAGE;
+    strcpy(packet.data, message->data);
+    packet.size = sizeof (message->data);
+    strcpy(packet.source, message->source);
+    
+    struct user_t* cur = cur_session->joined_users;
+    while(cur != NULL ){
+        if( strcmp(cur->client_id, message->source) != 0 ){ //deliver message to everyone but user that sent message
+            deliver_message( &packet, cur->sockfd);
+        }
+    }
+}
+
+void query_s(struct lab3message* message){
     
 }

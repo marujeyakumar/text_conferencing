@@ -4,7 +4,6 @@
 #include <signal.h>
 #include "message.h"
 //Constants
-#define MAXBUFLEN 1500
 #define BACKLOG 10 // how many pending connections queue will hold
 
 
@@ -17,6 +16,10 @@ void handle_message_s(struct lab3message* message);
 int check_user(char* id, char* pw);
 
 void login_s(struct lab3message* message);
-void exit_s();
+void exit_s(struct lab3message* message);
 void join_s(struct lab3message* message);
+void leave_s(struct lab3message* message);
+void create_s(struct lab3message* message);
+void text_s(struct lab3message* message);
+void query_s(struct lab3message* message);
 #endif	/* SERVER_H */
