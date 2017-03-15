@@ -7,11 +7,6 @@
 #define MAXBUFLEN 1500
 #define BACKLOG 10 // how many pending connections queue will hold
 
-typedef struct {
-    char* client_id;
-    char* password;
-    int joined_session;
-}user_t;
 
 
 void sigchld_handler(int s);

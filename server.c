@@ -1,5 +1,5 @@
 #include "server.h"
-
+#include "server_structs.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +15,9 @@
 int newfd;
 struct addrinfo *p;
 struct sockaddr_storage their_addr; // connector's address information
+
+struct session_t* active_sessions = NULL;
+struct user_t* active_users = NULL;
 
 int main(int argc, char *argv[]) {
 
@@ -186,6 +189,9 @@ void login_s(struct lab3message* message){
     if (valid_user_pw == 0) {
         data = "";
         packet.type = LO_ACK;
+        
+        /*struct user_t new_user =  
+        active_users = add_user();*/
     } else if (valid_user_pw == 1){
         data = "incorrect password";
         packet.type = LO_NACK;
