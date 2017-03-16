@@ -176,9 +176,14 @@ int check_user(char* id, char* pw){
     if( strcmp(id, "jean")==0 ) {
         if(strcmp(pw, "pw")==0){
             if(find_user(id, active_users)==NULL){ return 0; }
-            else { return 3; }
+            else { return 3; } 
         } else return 1; //bad pw
-    } 
+    } else if ( strcmp(id, "maru")==0 ) {
+        if(strcmp(pw, "pw")==0){
+            if(find_user(id, active_users)==NULL){ return 0; }
+            else { return 3; } 
+        } else return 1; //bad pw
+    }
     return 2; //no user
 }
 
