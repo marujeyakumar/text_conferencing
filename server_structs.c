@@ -49,6 +49,16 @@ struct session_t* find_session(char* session_id, struct session_t* head){
     return cur;
 }
 
+void print_sessions(char*sessions, struct session_t* head){
+    struct session_t* cur = head;
+
+    while(cur != NULL) {
+        sprintf("%s, ", cur->session_id);
+    }
+
+    printf("%s\n", sessions);
+}
+
 /************** user list functions ***************/
 struct user_t* add_user(struct user_t* new_user, struct user_t* head){
     if(head == NULL) {
@@ -85,3 +95,14 @@ struct user_t* find_user(char* client_id, struct user_t* head){
     if(cur == NULL) { return NULL; }
     return cur;
 }
+
+void print_users(char*users, struct user_t* head){
+    struct user_t* cur = head;
+    
+    while(cur != NULL) {
+        sprintf("%s, ", cur->client_id);
+    }
+
+    printf("%s\n", users);
+}
+

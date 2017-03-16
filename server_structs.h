@@ -25,11 +25,13 @@ struct session_t{
 struct session_t* add_session(struct session_t* new_session, struct session_t* head);
 struct session_t* delete_session(char* session_id, struct session_t* head);
 struct session_t* find_session(char* session_id, struct session_t* head);
+void print_sessions(char*sessions, struct session_t* head);
 
 /************** user list functions ***************/
 struct user_t* add_user(struct user_t* new_user, struct user_t* head);
 struct user_t* delete_user(char* client_id, struct user_t* head);
 struct user_t* find_user(char*  client_id, struct user_t* head);
+void print_users(char*sessions, struct user_t* head);
 
 
 #endif
