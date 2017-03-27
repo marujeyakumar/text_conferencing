@@ -20,7 +20,7 @@ int deliver_message(struct lab3message* message, int sockfd) {
         perror("client: sendto packet fail\n");
         exit(1);
     }
-    printf("Delivered\n");
+   printf("Delivered\n");
 }
 
 int receive_message(struct lab3message* message, int sockfd) {
@@ -36,17 +36,3 @@ int receive_message(struct lab3message* message, int sockfd) {
     printf("Recieved %o\n", message->type);
 }
 
-
-
-/*int handle_message_c(struct lab3message* message){
-        switch(message -> type){
-                case(LO_ACK): ;
-                case(LO_NACK): ;
-                case(JN_ACK): ;
-                case(JN_NACK): ;
-                case(NS_ACK): ;
-                case(MESSAGE): ;
-                case(QU_ACK): ;
-        }
-
-}*/

@@ -1,0 +1,2 @@
+/login jean pw localhost 5676
+/createsession New

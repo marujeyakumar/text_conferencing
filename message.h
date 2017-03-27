@@ -5,20 +5,25 @@
 #define MAXBUFLEN 1500
 
 enum TYPE {
-    LOGIN = 1,
-    LO_ACK = 2,
-    LO_NACK = 3,
-    EXIT = 4,
-    JOIN = 5,
-    JN_ACK = 6,
-    JN_NAK = 7,
+    LOGIN      = 1,
+    LO_ACK     = 2,
+    LO_NACK    = 3,
+    EXIT       = 4,
+    JOIN       = 5,
+    JN_ACK     = 6,
+    JN_NAK     = 7,
     LEAVE_SESS = 8,
-    NEW_SESS = 9,
-    NS_NCK = 10,
-    NS_ACK = 11,
-    MESSAGE = 12,
-    QUERY = 13,
-    QU_ACK = 14
+    NEW_SESS   = 9,
+    NS_NCK     = 10,
+    NS_ACK     = 11,
+    MESSAGE    = 12,
+    QUERY      = 13,
+    QU_ACK     = 14, 
+    INVITE     = 15,
+    INV_ACK    = 16,
+    INV_NACK   = 17,
+    INV_Y      = 18, 
+    INV_N      = 19
 };
 
 typedef struct lab3message {

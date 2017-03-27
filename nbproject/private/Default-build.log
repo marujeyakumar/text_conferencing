@@ -1,0 +1,1 @@
+gcc -o server server.c message.c server_structs.c -I.
