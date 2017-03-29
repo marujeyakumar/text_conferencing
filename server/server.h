@@ -22,5 +22,7 @@ void create_s(struct lab3message* message, int sender_fd);
 void text_s(struct lab3message* message, int sender_fd);
 void query_s(struct lab3message* message, int sender_fd);
 void invite_s(struct lab3message* message, int sender_fd); 
+void join_on_invite(struct lab3message* message, int sender_fd);
+void notify_inviter_of_rejection(struct lab3message* message, int sender_fd);
 
 #endif	/* SERVER_H */

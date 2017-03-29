@@ -12,7 +12,7 @@
 #include <arpa/inet.h>
 
 int deliver_message(struct lab3message* message, int sockfd) {
-    printf("Delivering message %o ...", message->type);
+    //printf("Delivering message %o ...", message->type);
     
     int numbytes = 0;
     if ((numbytes = send(sockfd, message, sizeof (struct lab3message),
@@ -20,11 +20,11 @@ int deliver_message(struct lab3message* message, int sockfd) {
         perror("client: sendto packet fail\n");
         exit(1);
     }
-   printf("Delivered\n");
+  // printf("Delivered\n");
 }
 
 int receive_message(struct lab3message* message, int sockfd) {
-    printf("Receiving message ...");
+  //  printf("Receiving message ...");
     
     int numbytes = 0;
     if ((numbytes = recv(sockfd, message, sizeof (struct lab3message),
@@ -33,6 +33,6 @@ int receive_message(struct lab3message* message, int sockfd) {
         exit(1);
     }
     
-    printf("Recieved %o\n", message->type);
+  //  printf("Recieved %o\n", message->type);
 }
 

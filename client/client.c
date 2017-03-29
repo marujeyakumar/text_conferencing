@@ -55,9 +55,13 @@ int main(int argc, char *argv[]) {
             if (recv_packet.type == MESSAGE) {
                 printf("Message from %s: %s\n", recv_packet.source, recv_packet.data);
             } else if (recv_packet.type == INVITE) {
-                printf("Type is: %d and the session to join is: %s\n", recv_packet.type, recv_packet.source);
-                respond_to_invite(recv_packet.source);
+                respond_to_invite(recv_packet.source,recv_packet.from);
+            } else if (recv_packet.type == JN_ACK){
+                notify_client_that_invite_accepted(); 
+            } else if (recv_packet.type == JN_NAK){
+                notify_client_that_invite_rejected(); 
             }
+           
 
         }
 
@@ -281,6 +285,12 @@ void leave_session() {
     sprintf(packet.source, status.client_id);
     sprintf(packet.data, status.session_id);
     deliver_message(&packet, status.sockfd);
+   
+    Message recv_packet; 
+   receive_message(&recv_packet, status.sockfd);
+   if(recv_packet.type == LEAVE_ACK){
+       
+   }
 
 }
 
@@ -376,7 +386,8 @@ void send_invite(char invitee[MAXBUFLEN]) {
     //send the session id so the client on the other side knows which session to join right??? 
     strcpy(packet.source, status.session_id);
     strcpy(packet.data, data);
-
+    //also need to keep track of WHO sent the invite in the first place 
+    strcpy(packet.from, status.client_id);
     deliver_message(&packet, status.sockfd);
 
     //Now we receive message
@@ -394,7 +405,7 @@ void send_invite(char invitee[MAXBUFLEN]) {
 
 }
 
-void respond_to_invite(char session[MAXBUFLEN]) {
+void respond_to_invite(char session[MAXBUFLEN], char inviter[MAXBUFLEN]) {
     printf("-------------- RECEIVED INVITE-----------------\n");
     printf("You have received an invite to join session %s\n", session);
     printf("Would you like to join? (y/n)\n");
@@ -407,28 +418,30 @@ void respond_to_invite(char session[MAXBUFLEN]) {
         
         //send a message with INV_Y to accept the invite
         if (strcmp(response, "y\n") == 0) {
-            printf("Yay you're gonna join a session\n");
+            printf("Congrats! You have sucessfully joined session %s!\n",session);
             
             struct lab3message packet, recv_packet;
             char data[MAXBUFLEN];
             sprintf(data, "%s", status.client_id);
             packet.type = INV_Y; //to indicate we are agreeing to join the session
             packet.size = sizeof (data);
-            //send the session id so the client on the other side knows which session to join right??? 
-            strcpy(packet.source, status.session_id);
-            strcpy(packet.data, data);
             
+            //send the session id so the client on the other side knows which session to join right??? 
+            strcpy(packet.source, session);
+            strcpy(packet.data, data);
+            strcpy(packet.from, inviter);
             deliver_message(&packet, status.sockfd);
             
             break;
 
         } else if (strcmp(response, "n\n") == 0) { 
-            printf("Sorry to hear you're a loser that doesn't wanna join any session\n");
+            printf("Rejection sucessfully sent. Sorry to hear that you don't want to join session %s!\n",session);
             
             struct lab3message packet, recv_packet;
             char data[MAXBUFLEN];
             sprintf(data, "%s", status.client_id);
-            packet.type = INV_N; //to indicate we have declined the invite            
+            packet.type = INV_N; //to indicate we have declined the invite     
+            strcpy(packet.from, inviter); 
             deliver_message(&packet, status.sockfd);
             
             break;
@@ -440,4 +453,18 @@ void respond_to_invite(char session[MAXBUFLEN]) {
     }
 
     return;
+}
+
+
+void notify_client_that_invite_accepted(){
+    
+    printf("-----------INVITE RESPONSE-----------\n");
+    printf("Success! Your invitation was accepted.\n"); 
+    return; 
+}
+
+void notify_client_that_invite_rejected(){
+    printf("-----------INVITE RESPONSE-----------\n");
+    printf("Unfortunately, your invite was not accepted.\n"); 
+    return; 
 }

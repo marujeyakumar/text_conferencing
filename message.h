@@ -13,17 +13,19 @@ enum TYPE {
     JN_ACK     = 6,
     JN_NAK     = 7,
     LEAVE_SESS = 8,
-    NEW_SESS   = 9,
-    NS_NCK     = 10,
-    NS_ACK     = 11,
-    MESSAGE    = 12,
-    QUERY      = 13,
-    QU_ACK     = 14, 
-    INVITE     = 15,
-    INV_ACK    = 16,
-    INV_NACK   = 17,
-    INV_Y      = 18, 
-    INV_N      = 19
+    LEAVE_ACK  = 9,
+    LEAVE_NACK = 10,
+    NEW_SESS   = 11,
+    NS_NCK     = 12,
+    NS_ACK     = 13,
+    MESSAGE    = 14,
+    QUERY      = 15,
+    QU_ACK     = 16, 
+    INVITE     = 17,
+    INV_ACK    = 18,
+    INV_NACK   = 19,
+    INV_Y      = 20, 
+    INV_N      = 21
 };
 
 typedef struct lab3message {
@@ -31,6 +33,7 @@ typedef struct lab3message {
     unsigned int size;
     unsigned char source[MAXBUFLEN];
     unsigned char data[MAXBUFLEN];
+    unsigned char from[MAXBUFLEN];
 } Message;
 
 int deliver_message(struct lab3message* message, int sockfd);

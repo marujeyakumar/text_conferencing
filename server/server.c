@@ -21,14 +21,13 @@ struct addrinfo *p;
 struct sockaddr_storage their_addr; // connector's address information
 fd_set master;
 
-
 int main(int argc, char *argv[]) {
-    
+
     if (argc < 2) {
         printf("Server: usage: server server_portnumber\n");
         exit(1);
     }
-    
+
     //active_sessions = (Session_t*) malloc(sizeof(Session_t));
     //active_users = (User_t*) malloc(sizeof(User_t));
     //active_sessions;
@@ -36,7 +35,7 @@ int main(int argc, char *argv[]) {
     printf("Server: Server Started\n");
     int sockfd = start_server(argv[1]);
     listen_server(sockfd);
-    
+
     free(active_sessions);
     free(active_users);
 }
@@ -148,9 +147,9 @@ void listen_server(int sockfd) {
                     printf("Server: New connection at sockfd %d\n", newfd);
                     FD_SET(newfd, &master); // add to master set
                 }
-                
+
                 receive_message(&new_mess, newfd);
-                printf("Server: %o %o %s %s\n", new_mess.type, new_mess.size, new_mess.source, new_mess.data);
+                //printf("Server: %o %o %s %s\n", new_mess.type, new_mess.size, new_mess.source, new_mess.data);
                 handle_message_s(&new_mess, newfd);
             }
         }
@@ -158,7 +157,7 @@ void listen_server(int sockfd) {
 }
 
 void handle_message_s(struct lab3message* message, int fd) {
-    
+
     switch (message -> type) {
         case(LOGIN):
             login_s(message, fd);
@@ -175,38 +174,50 @@ void handle_message_s(struct lab3message* message, int fd) {
         case(NEW_SESS):
             create_s(message, fd);
             break;
-        case(MESSAGE): 
+        case(MESSAGE):
             text_s(message, fd);
             break;
-        case(QUERY): 
+        case(QUERY):
             query_s(message, fd);
             break;
-        case(INVITE): 
+        case(INVITE):
             invite_s(message, fd);
-            break; 
+            break;
+        case(INV_Y):
+            join_on_invite(message, fd);
+            break;
+        case(INV_N):
+            notify_inviter_of_rejection(message, fd);
+            break;
+
         default: printf("Server: Client sent invalid packet type\n");
     }
 }
 
-int check_user(char* id, char* pw){
-    if( strcmp(id, "jean")==0 ) {
-        if(strcmp(pw, "pw")==0){
-            if(find_user(id, active_users)==NULL){ return 0; }
-            else { return 3; } 
+int check_user(char* id, char* pw) {
+    if (strcmp(id, "jean") == 0) {
+        if (strcmp(pw, "pw") == 0) {
+            if (find_user(id, active_users) == NULL) {
+                return 0;
+            } else {
+                return 3;
+            }
         } else return 1; //bad pw
-    } else if ( strcmp(id, "maru")==0 ) {
-        if(strcmp(pw, "pw")==0){
-            if(find_user(id, active_users)==NULL){ return 0; }
-            else { return 3; } 
+    } else if (strcmp(id, "maru") == 0) {
+        if (strcmp(pw, "pw") == 0) {
+            if (find_user(id, active_users) == NULL) {
+                return 0;
+            } else {
+                return 3;
+            }
         } else return 1; //bad pw
     }
     return 2; //no user
 }
 
-
 void login_s(struct lab3message* message, int sender_fd) {
     char *token;
-    User_t* new_user = (User_t*) malloc(sizeof(User_t));
+    User_t* new_user = (User_t*) malloc(sizeof (User_t));
 
     token = strtok(message->data, " ");
     strcpy(new_user->client_id, token);
@@ -216,7 +227,7 @@ void login_s(struct lab3message* message, int sender_fd) {
     strcpy(sess, "");
     strcpy(new_user->cur_session, sess);
     new_user->next = NULL;
-	new_user->sockfd = sender_fd;
+    new_user->sockfd = sender_fd;
 
     int valid_user_pw = check_user(new_user->client_id, new_user->password);
 
@@ -247,7 +258,7 @@ void login_s(struct lab3message* message, int sender_fd) {
 
 void exit_s(struct lab3message* message, int sender_fd) {
     active_users = delete_user(message->source, active_users);
-    FD_CLR(sender_fd, &master); 
+    FD_CLR(sender_fd, &master);
 }
 
 void join_s(struct lab3message* message, int sender_fd) {
@@ -282,36 +293,46 @@ void join_s(struct lab3message* message, int sender_fd) {
         m.type = JN_NAK;
         strcpy(m.data, "user has already joined session\n");
         deliver_message(&m, sender_fd);
-return;
+        return;
     }
 
-           
+
     strcpy(user->cur_session, message->data); //update user session info
-        Message m;
-        m.type = JN_ACK;
-        deliver_message(&m, sender_fd);
+    Message m;
+    m.type = JN_ACK;
+    deliver_message(&m, sender_fd);
 }
 
 void leave_s(struct lab3message* message, int sender_fd) {
-    
-    printf("Message-> data is %s\n", message->data);
+
+    // printf("Message-> data is %s\n", message->data);
     struct session_t* session_to_leave = find_session(message->data, active_sessions);
-    printf("Session to leave is: %s\n", session_to_leave->session_id); 
-    
+    //  printf("Session to leave is: %s\n", session_to_leave->session_id); 
+
     struct user_t* user = find_user(message->source, active_users);
 
     if (user == NULL) {
         printf("Server: error: user is not logged in\n");
+        Message m;
+        m.type = LEAVE_NACK;
+        deliver_message(&m, sender_fd);
+        return;
     }
 
     if (session_to_leave == NULL) {
         printf("Server: error: session doesn't exist\n");
+        Message m;
+        m.type = LEAVE_NACK;
+        deliver_message(&m, sender_fd);
         return;
     }
 
     //check if user is in the session that it wants to leave
-    if ( strcmp(user->cur_session, message->data) != 0) {
+    if (strcmp(user->cur_session, message->data) != 0) {
         printf("Server: error: user is not even in this session\n");
+        Message m;
+        m.type = LEAVE_NACK;
+        deliver_message(&m, sender_fd);
         return;
     }
 
@@ -319,6 +340,11 @@ void leave_s(struct lab3message* message, int sender_fd) {
     //update user session info
     printf("User %s has left session %s\n", user->client_id, user->cur_session);
     strcpy(user->cur_session, "");
+
+    Message m;
+    m.type = LEAVE_ACK;
+    deliver_message(&m, sender_fd);
+
     printf(" The current session of the user is %s\n", user->cur_session);
 }
 
@@ -327,26 +353,26 @@ void create_s(struct lab3message* message, int sender_fd) {
     printf("------------CREATE SESSION --------------\n");
     //printf("Server: active session head %s\n", active_sessions->session_id);
     struct session_t* session_to_leave = find_session(message->data, active_sessions);
-    
+
     if (session_to_leave != NULL) {
         printf("Server: error: session already exists\n");
-        
+
         Message m;
         m.type = NS_NCK;
         strcpy(m.data, "Session already exists\n");
-        
-        deliver_message(&m, sender_fd); 
+
+        deliver_message(&m, sender_fd);
         return;
     }
-    
+
     if (session_to_leave == NULL) {
-        printf("Server: session dne creating...\n");
+        printf("Server: session done creating...\n");
     }
-    
-    Session_t* new_session = (Session_t*) malloc(sizeof(Session_t));
+
+    Session_t* new_session = (Session_t*) malloc(sizeof (Session_t));
     strcpy(new_session->session_id, message->data);
-   // new_session->joined_users = NULL;
-    new_session->next=NULL;
+    // new_session->joined_users = NULL;
+    new_session->next = NULL;
 
     active_sessions = add_session(new_session, active_sessions);
 
@@ -366,7 +392,7 @@ void text_s(struct lab3message* message, int sender_fd) {
         return;
     }
 
-    if ( strcmp(user->cur_session, "") == 0 ) {
+    if (strcmp(user->cur_session, "") == 0) {
         printf("Server: error: user has not joined a session\n");
         return;
     }
@@ -380,71 +406,114 @@ void text_s(struct lab3message* message, int sender_fd) {
 
     struct user_t* cur = active_users;
     while (cur != NULL) {
-        if ( (strcmp(user->cur_session, cur->cur_session)==0 )&& (strcmp(cur->client_id, message->source) != 0)) { //deliver message to everyone in session but user that sent message
-			printf("send to socket: %d, client: %s\n", cur->sockfd, cur->client_id);
+        if ((strcmp(user->cur_session, cur->cur_session) == 0)&& (strcmp(cur->client_id, message->source) != 0)) { //deliver message to everyone in session but user that sent message
+            printf("send to socket: %d, client: %s\n", cur->sockfd, cur->client_id);
             deliver_message(&packet, cur->sockfd);
         }
         cur = cur->next;
     }
-    
-    printf("-------------After delivering message: \n");
-    printf("sender's current session is %s\n",user->cur_session);
-    printf("-------------------------------------------\n");
 }
 
 void query_s(struct lab3message* message, int sender_fd) {
     char users[MAXBUFLEN];
     char sessions[MAXBUFLEN];
-    
+
     char user_title [MAXBUFLEN];
     strcpy(user_title, "-----------ACTIVE USERS------------\n");
-    
+
     print_users(users, active_users);
     strcat(user_title, users);
-   // printf("%s\n", user_title);
-    
+    // printf("%s\n", user_title);
+
     char session_title [MAXBUFLEN];
     strcpy(session_title, "\n-----------ACTIVE SESSIONS----------\n");
     print_sessions(sessions, active_sessions);
     strcat(session_title, sessions);
     //printf("%s\n", session_title);
-    
+
     //char data[MAXBUFLEN];
     strcat(user_title, session_title);
-    
+
     Message m;
     m.type = QU_ACK;
-    m.size = sizeof(user_title);
+    m.size = sizeof (user_title);
     strcpy(m.data, user_title);
     deliver_message(&m, sender_fd);
 }
 
+void invite_s(struct lab3message* message, int sender_fd) {
+    // printf("Invitee is: %s\n", message->data); 
 
-void invite_s(struct lab3message* message, int sender_fd){
-    printf("Invitee is: %s\n", message->data); 
-    
     //First, find the user we wanna send the invite to 
     struct user_t* user = find_user(message->data, active_users);
-    
+
     //If the user doesn't exist, send INV_NACK to the user. 
-    if (user == NULL){
-         Message m;
-         m.type = INV_NACK;
-         deliver_message(&m, sender_fd);
+    if (user == NULL) {
+        Message m;
+        m.type = INV_NACK;
+        deliver_message(&m, sender_fd);
+        return;
+    } else if (strcmp(user->cur_session, "") != 0) {
+        //Check if the invitee was already part of a session 
+        Message m;
+        m.type = INV_NACK;
+        deliver_message(&m, sender_fd);
         return;
     }
-   
+
     //send an ack to the user saying the user was found and invite is was sent
     Message m;
     m.type = INV_ACK;
     deliver_message(&m, sender_fd);
-    
-    
+
+
     //need to forward the message to the specified client 
-    
-    deliver_message(message,user->sockfd); 
-    
-    
-    
-    return; 
+
+    deliver_message(message, user->sockfd);
+
+
+
+    return;
+}
+
+//function that will join a user on the invite. 
+//need to perform some error checking first 
+
+void join_on_invite(struct lab3message* message, int sender_fd) {
+    // printf("Message source is %s\n", message->source);
+    //printf("Message data is %s\n", message->data);
+
+    //Find the user we want to join
+    struct user_t* user = find_user(message->data, active_users);
+    if (user == NULL) {
+        printf("Join on Invite error: user was not found!\n");
+        return;
+    }
+
+    strcpy(user->cur_session, message->source);
+
+
+    //now find the user who sent the invite in the first place, so they can get an ack
+    struct user_t* inviter = find_user(message->from, active_users);
+
+    Message m;
+    m.type = JN_ACK;
+    deliver_message(&m, inviter->sockfd);
+
+    return;
+
+
+}
+
+
+//Function which simply notifies the inviter that the invitee has rejected the message
+
+void notify_inviter_of_rejection(struct lab3message* message, int sender_fd) {
+    struct user_t* inviter = find_user(message->from, active_users);
+
+    Message m;
+    m.type = JN_NAK;
+    deliver_message(&m, inviter->sockfd);
+
+    return;
 }

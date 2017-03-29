@@ -43,5 +43,9 @@ void list();
 void quit();
 void text_c(char text[MAXBUFLEN]);
 void send_invite(char invitee[MAXBUFLEN]); 
-void respond_to_invite(char session[MAXBUFLEN]);
+void respond_to_invite(char session[MAXBUFLEN], char inviter[MAXBUFLEN]);
+
+
+void notify_client_that_invite_accepted(); 
+void notify_client_that_invite_rejected();
 #endif /* CLIENT_H */
