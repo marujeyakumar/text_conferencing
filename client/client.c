@@ -31,7 +31,6 @@ int main(int argc, char *argv[]) {
         FD_SET(fileno(stdin), &readfds);
 
         if (status.logged_in == 0) { //not logged in, only listen on stdin
-            printf("fdmax = stdin: \n");
             if (select(fileno(stdin) + 1, &readfds, NULL, NULL, NULL) == -1) {
                 perror("Client: select");
                 exit(1);
@@ -46,7 +45,6 @@ int main(int argc, char *argv[]) {
 
 
         if (FD_ISSET(fileno(stdin), &readfds)) {
-            printf("handle commands: \n");
             int quit = handle_commands_c();
             if (quit == 1) break;
 
@@ -86,7 +84,11 @@ int handle_commands_c() {
     int cmd_type = check_command(tmp);
 
     //based on that command type, do different things 
-
+    if(cmd_type == -1 ) {  
+        printf("Invalid command plz try again\n");
+        return 0;
+    }
+    
     if (cmd_type == 0) { //login 
         //we be logging in 
         char client_id[MAXBUFLEN];
@@ -122,7 +124,7 @@ int handle_commands_c() {
         sscanf(command, "%s %s", tmp, invitee);
         send_invite(invitee);
     }
-
+    
     return 0;
 }
 
@@ -147,7 +149,7 @@ int check_command(char* command) {
     if (strcmp(command, "/list") == 0) return 5;
     if (strcmp(command, "/quit") == 0) return 6;
     if (strcmp(command, "/invite") == 0) return 7;
-
+    else return -1;
 }
 
 /***********************Functions for each command ******************************/
@@ -274,13 +276,11 @@ void leave_session() {
         return;
     }
 
-
     Message packet;
     packet.type = LEAVE_SESS; //leave session 
     sprintf(packet.source, status.client_id);
+    sprintf(packet.data, status.session_id);
     deliver_message(&packet, status.sockfd);
-
-
 
 }
 

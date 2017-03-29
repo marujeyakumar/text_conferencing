@@ -183,7 +183,7 @@ void handle_message_s(struct lab3message* message, int fd) {
             break;
         case(INVITE): 
             invite_s(message, fd);
-            break;        
+            break; 
         default: printf("Server: Client sent invalid packet type\n");
     }
 }
@@ -253,9 +253,6 @@ void exit_s(struct lab3message* message, int sender_fd) {
 void join_s(struct lab3message* message, int sender_fd) {
     printf("----------JOIN SESSION ------");
     struct session_t* session_to_join = find_session(message->data, active_sessions);
-            //printf("Server: (join) active users %s with session %s\n", active_users->client_id, active_users->cur_session);
-            //printf("Server: (join) session to join found %s\n", session_to_join->session_id);
-
     struct user_t* user = find_user(message->source, active_users);
 
     if (user == NULL) {
@@ -296,7 +293,11 @@ return;
 }
 
 void leave_s(struct lab3message* message, int sender_fd) {
+    
+    printf("Message-> data is %s\n", message->data);
     struct session_t* session_to_leave = find_session(message->data, active_sessions);
+    printf("Session to leave is: %s\n", session_to_leave->session_id); 
+    
     struct user_t* user = find_user(message->source, active_users);
 
     if (user == NULL) {
@@ -318,7 +319,7 @@ void leave_s(struct lab3message* message, int sender_fd) {
     //update user session info
     printf("User %s has left session %s\n", user->client_id, user->cur_session);
     strcpy(user->cur_session, "");
-    printf(" %s\n", user->cur_session);
+    printf(" The current session of the user is %s\n", user->cur_session);
 }
 
 void create_s(struct lab3message* message, int sender_fd) {
@@ -348,7 +349,6 @@ void create_s(struct lab3message* message, int sender_fd) {
     new_session->next=NULL;
 
     active_sessions = add_session(new_session, active_sessions);
-   // printf("Server: addsession %s\n", active_sessions->session_id);
 
     // Send a confirmation
     Message m;
@@ -358,6 +358,7 @@ void create_s(struct lab3message* message, int sender_fd) {
 
 void text_s(struct lab3message* message, int sender_fd) {
     printf("------------ MESSAGE --------------\n");
+    //find the user who is sending the message 
     struct user_t* user = find_user(message->source, active_users);
 
     if (user == NULL) {
@@ -385,6 +386,10 @@ void text_s(struct lab3message* message, int sender_fd) {
         }
         cur = cur->next;
     }
+    
+    printf("-------------After delivering message: \n");
+    printf("sender's current session is %s\n",user->cur_session);
+    printf("-------------------------------------------\n");
 }
 
 void query_s(struct lab3message* message, int sender_fd) {

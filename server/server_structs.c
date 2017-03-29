@@ -44,13 +44,9 @@ struct session_t* delete_session(char* session_id, struct session_t* head){
 
 struct session_t* find_session(char* session_id, struct session_t* head){
     struct session_t* cur = head;
-    printf("Server: sessoin id is %s\n", session_id);
-    printf("Server: cur sessoin id is %s\n", head->session_id);
 
     while(cur != NULL && (strcmp(cur->session_id, session_id) != 0 )) {
         cur = cur->next;
-        printf("Server: cur sessoin id is %s\n", cur->session_id);
-
     }
     
     if(cur == NULL) { return NULL; }
