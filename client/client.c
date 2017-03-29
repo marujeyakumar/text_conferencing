@@ -49,19 +49,19 @@ int main(int argc, char *argv[]) {
             if (quit == 1) break;
 
         } else if (FD_ISSET(status.sockfd, &readfds)) {
-            printf("receive from server: \n");
+
             struct lab3message recv_packet;
             receive_message(&recv_packet, status.sockfd);
             if (recv_packet.type == MESSAGE) {
-                printf("Message from %s: %s\n", recv_packet.source, recv_packet.data);
+                display_message(recv_packet);
             } else if (recv_packet.type == INVITE) {
-                respond_to_invite(recv_packet.source,recv_packet.from);
-            } else if (recv_packet.type == JN_ACK){
-                notify_client_that_invite_accepted(); 
-            } else if (recv_packet.type == JN_NAK){
-                notify_client_that_invite_rejected(); 
+                respond_to_invite(recv_packet.source, recv_packet.from);
+            } else if (recv_packet.type == JN_ACK) {
+                notify_client_that_invite_accepted();
+            } else if (recv_packet.type == JN_NAK) {
+                notify_client_that_invite_rejected();
             }
-           
+
 
         }
 
@@ -88,11 +88,11 @@ int handle_commands_c() {
     int cmd_type = check_command(tmp);
 
     //based on that command type, do different things 
-    if(cmd_type == -1 ) {  
+    if (cmd_type == -1) {
         printf("Invalid command plz try again\n");
         return 0;
     }
-    
+
     if (cmd_type == 0) { //login 
         //we be logging in 
         char client_id[MAXBUFLEN];
@@ -128,7 +128,7 @@ int handle_commands_c() {
         sscanf(command, "%s %s", tmp, invitee);
         send_invite(invitee);
     }
-    
+
     return 0;
 }
 
@@ -177,6 +177,15 @@ void login_c(char client_id[MAXBUFLEN], char password[MAXBUFLEN], char server_ip
     char port_s[MAXBUFLEN];
     sprintf(port_s, "%d", port);
 
+    //Error checking - if the server is incorrect, or if the port number was incorrect 
+    if (strcmp(server_ip, "localhost") != 0) {
+        printf("Login failure: Incorrect server ip was given.\n");
+        return;
+    }
+    if (port != 5676) {
+        printf("Login failure: Incorrect port number was given.\n");
+        return;
+    }
     if ((rv = getaddrinfo(server_ip, port_s, &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         exit(1);
@@ -232,20 +241,30 @@ void login_c(char client_id[MAXBUFLEN], char password[MAXBUFLEN], char server_ip
 }
 
 void logout() {
-
+    printf("------- LOGOUT ------\n");
+    if (status.logged_in == 0) {
+        printf("Logout Error: You were not logged in before! \n");
+        return;
+    }
     Message packet;
     packet.type = EXIT;
     sprintf(packet.source, status.client_id);
     deliver_message(&packet, status.sockfd);
     status.logged_in = 0;
     close(status.sockfd);
+    printf("Logged out Succesfully.\n");
     // FD_CLR(status.sockfd, &readfds);
 }
 
 void join_session(char session_id[MAXBUFLEN]) {
     printf("------- JOIN SESSION ------\n");
-
-
+    if (status.logged_in == 0) {
+        printf("Join Session Error: You were not logged in before! \n");
+        return;
+    }
+    if (strcmp(status.session_id, "") != 0) {
+        printf("Join Session Error: You are already part of session %s. Please leave the session if you wish to join another one.\n", status.session_id);
+    }
 
     //Construct packet to send 
     struct lab3message packet, recv_packet;
@@ -274,7 +293,10 @@ void leave_session() {
 
     printf("------- LEAVE SESSION ------\n");
 
-
+    if (status.logged_in == 0) {
+        printf("Leave Session Error: You were not logged in before! \n");
+        return; 
+    }
     if (strcmp(status.session_id, "") == 0) {
         printf("Leave Session failure: User is has not joined any sessions\n");
         return;
@@ -285,19 +307,25 @@ void leave_session() {
     sprintf(packet.source, status.client_id);
     sprintf(packet.data, status.session_id);
     deliver_message(&packet, status.sockfd);
-   
-    Message recv_packet; 
-   receive_message(&recv_packet, status.sockfd);
-   if(recv_packet.type == LEAVE_ACK){
-       
-   }
+
+    Message recv_packet;
+    receive_message(&recv_packet, status.sockfd);
+    if (recv_packet.type == LEAVE_ACK) {
+        printf("You have succesfully left the session!\n");
+    }
+    if (recv_packet.type == LEAVE_NACK) {
+        printf("Leave session was not succesful. Either you dont exit, are not part of a session, or the session to leave doesn't exist.\n");
+    }
 
 }
 
 void create_session(char session_id[MAXBUFLEN]) {
     printf("------- CREATE SESSION ------\n");
-    //set the status' session id 
-    //printf("Client: Current Session ID is %s \n", session_id);
+
+    if (status.logged_in == 0) {
+        printf("Create Session Error: You were not logged in before! \n");
+        return; 
+    }
 
     //put the necessary information into the packet 
     struct lab3message packet, recv_packet;
@@ -350,6 +378,10 @@ void text_c(char text[MAXBUFLEN]) {
         printf("Message send failure: user is not logged in\n");
         return;
     }
+    if(strcmp(status.session_id,"")==0){
+        printf("Message send failure: user is not part of a session! Please join a session to send messages.\n");
+        return;
+    }
 
     //put the necessary information into the packet 
     struct lab3message packet, recv_packet;
@@ -361,23 +393,22 @@ void text_c(char text[MAXBUFLEN]) {
     strcpy(packet.data, data);
 
     deliver_message(&packet, status.sockfd);
+    printf("Message successfully sent!\n");
 }
 
 void send_invite(char invitee[MAXBUFLEN]) {
     printf("------- SEND INVITE ------\n");
-
-
-    printf("Our logged in status is %d\n", status.logged_in);
     if (status.logged_in == 0) {
         printf("Send invite failure: user is not logged in\n");
         return;
     }
     if (strcmp(status.session_id, "") == 0) {
         printf("Send invite failure: user is not part of a session!\n");
+        return;
     }
 
     //send a message to the server to make sure the user we're sending to actually exists
-    printf("person we wanna invite is %s\n", invitee);
+
     struct lab3message packet, recv_packet;
     char data[MAXBUFLEN];
     sprintf(data, "%s", invitee);
@@ -390,7 +421,7 @@ void send_invite(char invitee[MAXBUFLEN]) {
     strcpy(packet.from, status.client_id);
     deliver_message(&packet, status.sockfd);
 
-    //Now we receive message
+    //Now we receive message back from the server on the status of our invite 
     receive_message(&recv_packet, status.sockfd);
     //Error checking - if the user even exists
     if (recv_packet.type == INV_NACK) {
@@ -398,7 +429,7 @@ void send_invite(char invitee[MAXBUFLEN]) {
         return;
     }
     if (recv_packet.type == INV_ACK) {
-        printf("User was found - invite has been sent!\n");
+        printf("Send Invite Success: User was found - invite has been sent!\n");
     }
 
 
@@ -413,58 +444,63 @@ void respond_to_invite(char session[MAXBUFLEN], char inviter[MAXBUFLEN]) {
     //used a simple while loop to manage the user input 
     char response[MAXBUFLEN];
     while (1) {
-        
+
         fgets(response, 100, stdin);
-        
+
         //send a message with INV_Y to accept the invite
         if (strcmp(response, "y\n") == 0) {
-            printf("Congrats! You have sucessfully joined session %s!\n",session);
-            
+            printf("Congrats! You have sucessfully joined session %s!\n", session);
+
             struct lab3message packet, recv_packet;
             char data[MAXBUFLEN];
             sprintf(data, "%s", status.client_id);
             packet.type = INV_Y; //to indicate we are agreeing to join the session
             packet.size = sizeof (data);
-            
+
             //send the session id so the client on the other side knows which session to join right??? 
             strcpy(packet.source, session);
             strcpy(packet.data, data);
             strcpy(packet.from, inviter);
             deliver_message(&packet, status.sockfd);
-            
+
             break;
 
-        } else if (strcmp(response, "n\n") == 0) { 
-            printf("Rejection sucessfully sent. Sorry to hear that you don't want to join session %s!\n",session);
-            
+        } else if (strcmp(response, "n\n") == 0) {
+            printf("Rejection sucessfully sent. Sorry to hear that you don't want to join session %s!\n", session);
+
             struct lab3message packet, recv_packet;
             char data[MAXBUFLEN];
             sprintf(data, "%s", status.client_id);
             packet.type = INV_N; //to indicate we have declined the invite     
-            strcpy(packet.from, inviter); 
+            strcpy(packet.from, inviter);
             deliver_message(&packet, status.sockfd);
-            
+
             break;
 
         } else {
-            printf("Wrong input, please enter y or n for yes or no. \n");
-            continue; 
+            printf("Wrong input, please enter y to accept or n to reject. \n");
+            continue;
         }
     }
 
     return;
 }
 
+void notify_client_that_invite_accepted() {
 
-void notify_client_that_invite_accepted(){
-    
     printf("-----------INVITE RESPONSE-----------\n");
-    printf("Success! Your invitation was accepted.\n"); 
-    return; 
+    printf("Success! Your invitation was accepted.\n");
+    return;
 }
 
-void notify_client_that_invite_rejected(){
+void notify_client_that_invite_rejected() {
     printf("-----------INVITE RESPONSE-----------\n");
-    printf("Unfortunately, your invite was not accepted.\n"); 
-    return; 
+    printf("Unfortunately, your invite was not accepted.\n");
+    return;
+}
+
+void display_message(struct lab3message packet) {
+    printf("------------YOU HAVE RECEIVED A MESSAGE-----------\n");
+    printf("Message from %s: %s\n", packet.source, packet.data);
+    return;
 }
