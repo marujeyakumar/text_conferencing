@@ -60,6 +60,9 @@ int main(int argc, char *argv[]) {
                 notify_client_that_invite_accepted();
             } else if (recv_packet.type == JN_NAK) {
                 notify_client_that_invite_rejected();
+            } else if(recv_packet.type == KICK_ACK){
+                printf("Let user know we're kicking them out\n");
+                notify_client_that_kicked_out(recv_packet.from);
             }
 
 
@@ -127,6 +130,10 @@ int handle_commands_c() {
         char invitee[MAXBUFLEN];
         sscanf(command, "%s %s", tmp, invitee);
         send_invite(invitee);
+    } else if (cmd_type == 8) {
+        char user_kicked[MAXBUFLEN];
+        sscanf(command, "%s %s", tmp, user_kicked);
+        kick_out_user(user_kicked);
     }
 
     return 0;
@@ -153,6 +160,7 @@ int check_command(char* command) {
     if (strcmp(command, "/list") == 0) return 5;
     if (strcmp(command, "/quit") == 0) return 6;
     if (strcmp(command, "/invite") == 0) return 7;
+    if (strcmp(command, "/kickout") == 0) return 8;
     else return -1;
 }
 
@@ -262,9 +270,6 @@ void join_session(char session_id[MAXBUFLEN]) {
         printf("Join Session Error: You were not logged in before! \n");
         return;
     }
-    if (strcmp(status.session_id, "") != 0) {
-        printf("Join Session Error: You are already part of session %s. Please leave the session if you wish to join another one.\n", status.session_id);
-    }
 
     //Construct packet to send 
     struct lab3message packet, recv_packet;
@@ -295,7 +300,7 @@ void leave_session() {
 
     if (status.logged_in == 0) {
         printf("Leave Session Error: You were not logged in before! \n");
-        return; 
+        return;
     }
     if (strcmp(status.session_id, "") == 0) {
         printf("Leave Session failure: User is has not joined any sessions\n");
@@ -324,7 +329,7 @@ void create_session(char session_id[MAXBUFLEN]) {
 
     if (status.logged_in == 0) {
         printf("Create Session Error: You were not logged in before! \n");
-        return; 
+        return;
     }
 
     //put the necessary information into the packet 
@@ -378,7 +383,7 @@ void text_c(char text[MAXBUFLEN]) {
         printf("Message send failure: user is not logged in\n");
         return;
     }
-    if(strcmp(status.session_id,"")==0){
+    if (strcmp(status.session_id, "") == 0) {
         printf("Message send failure: user is not part of a session! Please join a session to send messages.\n");
         return;
     }
@@ -408,7 +413,6 @@ void send_invite(char invitee[MAXBUFLEN]) {
     }
 
     //send a message to the server to make sure the user we're sending to actually exists
-
     struct lab3message packet, recv_packet;
     char data[MAXBUFLEN];
     sprintf(data, "%s", invitee);
@@ -503,4 +507,46 @@ void display_message(struct lab3message packet) {
     printf("------------YOU HAVE RECEIVED A MESSAGE-----------\n");
     printf("Message from %s: %s\n", packet.source, packet.data);
     return;
+}
+
+void kick_out_user(char user_kicked[MAXBUFLEN]) {
+    printf("------------KICK OUT USER-----------\n");
+    if (status.logged_in == 0) {
+        printf("Kick Out failure: user is not logged in\n");
+        return;
+    }
+    if (strcmp(status.session_id, "") == 0) {
+        printf("Kick Out Failure: user is not part of a session!\n");
+        return;
+    }
+    
+    struct lab3message packet, recv_packet;
+    char data[MAXBUFLEN];
+    sprintf(data, "%s", user_kicked);
+    packet.type = KICK_OUT; //to indicate we are creating a new session
+    packet.size = sizeof (data);
+    //send the session id so the client on the other side knows which session to search this user in. 
+    strcpy(packet.source, status.session_id);
+    strcpy(packet.data, data);
+    //also need to keep track of WHO sent the invite in the first place 
+    strcpy(packet.from, status.client_id);
+    deliver_message(&packet, status.sockfd);
+    
+    
+     receive_message(&recv_packet, status.sockfd);
+     if(recv_packet.type == KICK_ACK){
+         printf("You have successfully kicked out %s\n", user_kicked); 
+         return; 
+     }
+     else if(recv_packet.type == KICK_NAK){
+         printf("Kick out unsuccessful! Either the user doesn't exist or isn't part of your session.\n"); 
+     }
+    
+}
+
+
+void notify_client_that_kicked_out(char who_kicked[MAXBUFLEN]){
+    printf("-------------KICKED OUT NOTIFICATION-------------\n");
+    printf("Unfortunately you have been kicked out of session %s by %s\n",status.session_id,who_kicked); 
+    return; 
 }

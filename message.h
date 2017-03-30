@@ -25,7 +25,10 @@ enum TYPE {
     INV_ACK    = 18,
     INV_NACK   = 19,
     INV_Y      = 20, 
-    INV_N      = 21
+    INV_N      = 21, 
+    KICK_OUT   = 22, 
+    KICK_NAK   = 23,
+    KICK_ACK   = 24
 };
 
 typedef struct lab3message {

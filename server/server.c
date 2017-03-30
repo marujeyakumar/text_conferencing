@@ -189,6 +189,9 @@ void handle_message_s(struct lab3message* message, int fd) {
         case(INV_N):
             notify_inviter_of_rejection(message, fd);
             break;
+         case(KICK_OUT):
+            kick_out_user(message, fd);
+            break;           
 
         default: printf("Server: Client sent invalid packet type\n");
     }
@@ -338,14 +341,14 @@ void leave_s(struct lab3message* message, int sender_fd) {
 
     //delete user from session
     //update user session info
-    printf("User %s has left session %s\n", user->client_id, user->cur_session);
+     printf("User %s has left session %s\n", user->client_id, user->cur_session);
     strcpy(user->cur_session, "");
 
     Message m;
     m.type = LEAVE_ACK;
     deliver_message(&m, sender_fd);
 
-    printf(" The current session of the user is %s\n", user->cur_session);
+   // printf(" The current session of the user is %s\n", user->cur_session);
 }
 
 void create_s(struct lab3message* message, int sender_fd) {
@@ -516,4 +519,38 @@ void notify_inviter_of_rejection(struct lab3message* message, int sender_fd) {
     deliver_message(&m, inviter->sockfd);
 
     return;
+}
+
+
+void kick_out_user(struct lab3message* message, int sender_fd){
+    
+    //First, find the user we wanna kick out
+    struct user_t* user = find_user(message->data, active_users);
+    
+    //if no user exists with that specification
+    if(user == NULL){
+        Message m;
+        m.type = KICK_NAK;
+        deliver_message(&m, sender_fd);
+        return;
+        
+    } else if (strcmp(user->cur_session,message->source) != 0){
+        //if the user does exist but does not belong in that session 
+        Message m;
+        m.type = KICK_NAK;
+        deliver_message(&m, sender_fd);
+        return;
+    }
+    
+    //kicking them out of the session 
+    strcpy(user->cur_session, "");
+
+    Message m;
+    m.type = KICK_ACK;
+    strcpy(m.from, message->from); 
+    deliver_message(&m, sender_fd);
+    deliver_message(&m, user->sockfd); //to let the user know we're kicking them out lol
+    
+    
+    return; 
 }
