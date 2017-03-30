@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
                 notify_client_that_invite_accepted();
             } else if (recv_packet.type == JN_NAK) {
                 notify_client_that_invite_rejected();
-            } else if(recv_packet.type == KICK_ACK){
+            } else if (recv_packet.type == KICK_ACK) {
                 printf("Let user know we're kicking them out\n");
                 notify_client_that_kicked_out(recv_packet.from);
             }
@@ -519,7 +519,11 @@ void kick_out_user(char user_kicked[MAXBUFLEN]) {
         printf("Kick Out Failure: user is not part of a session!\n");
         return;
     }
-    
+    if (strcmp(status.client_id, user_kicked) == 0) {
+        printf("Kick Out Failure: you can't kick yourself out!\n");
+        return;
+    }
+
     struct lab3message packet, recv_packet;
     char data[MAXBUFLEN];
     sprintf(data, "%s", user_kicked);
@@ -531,22 +535,20 @@ void kick_out_user(char user_kicked[MAXBUFLEN]) {
     //also need to keep track of WHO sent the invite in the first place 
     strcpy(packet.from, status.client_id);
     deliver_message(&packet, status.sockfd);
-    
-    
-     receive_message(&recv_packet, status.sockfd);
-     if(recv_packet.type == KICK_ACK){
-         printf("You have successfully kicked out %s\n", user_kicked); 
-         return; 
-     }
-     else if(recv_packet.type == KICK_NAK){
-         printf("Kick out unsuccessful! Either the user doesn't exist or isn't part of your session.\n"); 
-     }
-    
+
+
+    receive_message(&recv_packet, status.sockfd);
+    if (recv_packet.type == KICK_ACK) {
+        printf("You have successfully kicked out %s\n", user_kicked);
+        return;
+    } else if (recv_packet.type == KICK_NAK) {
+        printf("Kick out unsuccessful! Either the user doesn't exist or isn't part of your session.\n");
+    }
+
 }
 
-
-void notify_client_that_kicked_out(char who_kicked[MAXBUFLEN]){
+void notify_client_that_kicked_out(char who_kicked[MAXBUFLEN]) {
     printf("-------------KICKED OUT NOTIFICATION-------------\n");
-    printf("Unfortunately you have been kicked out of session %s by %s\n",status.session_id,who_kicked); 
-    return; 
+    printf("Unfortunately you have been kicked out of session %s by %s\n", status.session_id, who_kicked);
+    return;
 }
